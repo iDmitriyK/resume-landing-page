@@ -32,3 +32,20 @@ jobs:
           env | sort | head -20
           echo "::endgroup::"
           echo "::notice file=workflows/03-contexts-lab.yml,line=1::release=${{ inputs.release_kind }} sha=${{ steps.meta.outputs.short_sha }}"
+      - name: Write step summary
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" << 'EOF'
+          ## 🔍 Contexts Lab Summary
+          
+          | Key | Value |
+          |-----|-------|
+          | Event | `${{ github.event_name }}` |
+          | Ref | `${{ github.ref }}` |
+          | Actor | `${{ github.actor }}` |
+          | Run ID | `${{ github.run_id }}` |
+          | Release kind | `${{ inputs.release_kind }}` |
+          | Short SHA | `${{ steps.meta.outputs.short_sha }}` |
+          | Timestamp | `${{ steps.meta.outputs.ts }}` |
+          
+          > ⚠️ Fake token was masked — you won't see it in logs.
+          EOF
