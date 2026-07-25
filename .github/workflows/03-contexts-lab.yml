@@ -1,51 +1,55 @@
-name: contexts-lab
-on:
-  workflow_dispatch:
-    inputs:
-      release_kind:
-        type: choice
-        options: [patch, minor, major]
-        default: patch
-permissions:
-  contents: read
-jobs:
-  dump:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Dump github context
-        env:
-          GH_CTX: ${{ toJSON(github) }}
-        run: echo "$GH_CTX" | jq '{event_name, ref, sha, actor, run_id, run_attempt}'
-      - name: Set step output
-        id: meta
-        run: |
-          echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
-          echo "ts=$(date -u +%FT%TZ)"      >> "$GITHUB_OUTPUT"
-      - name: Mask a fake token
-        run: |
-          FAKE=$(openssl rand -hex 16)
-          echo "::add-mask::$FAKE"
-          echo "fake=$FAKE" >> "$GITHUB_ENV"
-      - name: Group + annotations
-        run: |
-          echo "::group::env summary"
-          env | sort | head -20
-          echo "::endgroup::"
-          echo "::notice file=workflows/03-contexts-lab.yml,line=1::release=${{ inputs.release_kind }} sha=${{ steps.meta.outputs.short_sha }}"
-      - name: Write step summary
-        run: |
-          cat >> "$GITHUB_STEP_SUMMARY" << 'EOF'
-          ## 🔍 Contexts Lab Summary
-          
-          | Key | Value |
-          |-----|-------|
-          | Event | `${{ github.event_name }}` |
-          | Ref | `${{ github.ref }}` |
-          | Actor | `${{ github.actor }}` |
-          | Run ID | `${{ github.run_id }}` |
-          | Release kind | `${{ inputs.release_kind }}` |
-          | Short SHA | `${{ steps.meta.outputs.short_sha }}` |
-          | Timestamp | `${{ steps.meta.outputs.ts }}` |
-          
-          > ⚠️ Fake token was masked — you won't see it in logs.
-          EOF
+   name: contexts-lab
+   on:
+     workflow_dispatch:
+       inputs:
+         release_kind:
+           type: choice
+           options: [patch, minor, major]
+           default: patch
+   permissions:
+     contents: read
+   jobs:
+     dump:
+       runs-on: ubuntu-latest
+       steps:
+         - name: Dump github context
+           env:
+             GH_CTX: ${{ toJSON(github) }}
+           run: echo "$GH_CTX" | jq '{event_name, ref, sha, actor, run_id, run_attempt}'
+         - name: Set step output
+           id: meta
+           run: |
+             echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+             echo "ts=$(date -u +%FT%TZ)"      >> "$GITHUB_OUTPUT"
+         - name: Mask a fake token
+           run: |
+             FAKE=$(openssl rand -hex 16)
+             echo "::add-mask::$FAKE"
+             echo "fake=$FAKE" >> "$GITHUB_ENV"
+         - name: Group + annotations
+           run: |
+             echo "::group::env summary"
+             env | sort | head -20
+             echo "::endgroup::"
+             echo "::notice file=workflows/03-contexts-lab.yml,line=1::release=${{ inputs.release_kind }} sha=${{ steps.meta.outputs.short_sha }}"
+         - name: Write job summary
+           run: |
+             {
+               echo "## Contexts lab"
+               echo ""
+               echo "| Key | Value |"
+               echo "| --- | --- |"
+               echo "| Release kind | \`${{ inputs.release_kind }}\` |"
+               echo "| Short SHA | \`${{ steps.meta.outputs.short_sha }}\` |"
+               echo "| Timestamp | \`${{ steps.meta.outputs.ts }}\` |"
+               echo "| Actor | @${{ github.actor }} |"
+               echo "| Run | [#${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) attempt ${{ github.run_attempt }} |"
+               echo ""
+               echo "<details><summary>Runner info</summary>"
+               echo ""
+               echo '```'
+               echo "os=${RUNNER_OS} arch=${RUNNER_ARCH} node=$(node -v)"
+               echo '```'
+               echo ""
+               echo "</details>"
+             } >> "$GITHUB_STEP_SUMMARY"
